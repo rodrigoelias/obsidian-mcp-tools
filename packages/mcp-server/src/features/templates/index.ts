@@ -2,6 +2,7 @@ import {
   formatMcpError,
   makeRequest,
   parseTemplateParameters,
+  validateVaultPath,
   type ToolRegistry,
 } from "$/shared";
 import { type } from "arktype";
@@ -19,10 +20,13 @@ export function registerTemplaterTools(tools: ToolRegistry) {
       ),
     }).describe("Execute a Templater template with the given arguments"),
     async ({ arguments: args }) => {
+      validateVaultPath(args.name);
+      if (args.targetPath) validateVaultPath(args.targetPath);
+
       // Get prompt content
       const data = await makeRequest(
         LocalRestAPI.ApiVaultFileResponse,
-        `/vault/${args.name}`,
+        `/vault/${encodeURIComponent(args.name)}`,
         {
           headers: { Accept: LocalRestAPI.MIME_TYPE_OLRAPI_NOTE_JSON },
         },

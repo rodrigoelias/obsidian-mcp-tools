@@ -1,4 +1,4 @@
-import { makeRequest, type ToolRegistry } from "$/shared";
+import { makeRequest, validateDataviewQuery, validateVaultPath, type ToolRegistry } from "$/shared";
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { type } from "arktype";
 import { LocalRestAPI } from "shared";
@@ -158,6 +158,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       "Open a document in the Obsidian UI. Creates a new document if it doesn't exist. Returns a confirmation if the file was opened successfully.",
     ),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       const query = args.newLeaf ? "?newLeaf=true" : "";
 
       await makeRequest(
@@ -186,6 +187,10 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       "Search for documents matching a specified query using either Dataview DQL or JsonLogic.",
     ),
     async ({ arguments: args }) => {
+      if (args.queryType === "dataview") {
+        validateDataviewQuery(args.query);
+      }
+
       const contentType =
         args.queryType === "dataview"
           ? "application/vnd.olrapi.dataview.dql+txt"
@@ -251,7 +256,10 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       "List files in the root directory or a specified subdirectory of your vault.",
     ),
     async ({ arguments: args }) => {
-      const path = args.directory ? `${args.directory}/` : "";
+      if (args.directory) validateVaultPath(args.directory);
+      const path = args.directory
+        ? `${args.directory.split("/").map(encodeURIComponent).join("/")}/`
+        : "";
       const data = await makeRequest(
         LocalRestAPI.ApiVaultFileResponse.or(
           LocalRestAPI.ApiVaultDirectoryResponse,
@@ -274,6 +282,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       },
     }).describe("Get the content of a file from your vault."),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       const isJson = args.format === "json";
       const format = isJson
         ? "application/vnd.olrapi.note+json"
@@ -307,6 +316,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       },
     }).describe("Create a new file in your vault or update an existing one."),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       await makeRequest(
         LocalRestAPI.ApiNoContentResponse,
         `/vault/${encodeURIComponent(args.filename)}`,
@@ -331,6 +341,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       },
     }).describe("Append content to a new or existing file."),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       await makeRequest(
         LocalRestAPI.ApiNoContentResponse,
         `/vault/${encodeURIComponent(args.filename)}`,
@@ -356,6 +367,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       "Insert or modify content in a file relative to a heading, block reference, or frontmatter field.",
     ),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       const headers: HeadersInit = {
         Operation: args.operation,
         "Target-Type": args.targetType,
@@ -401,6 +413,7 @@ export function registerLocalRestApiTools(tools: ToolRegistry, server: Server) {
       },
     }).describe("Delete a file from your vault."),
     async ({ arguments: args }) => {
+      validateVaultPath(args.filename);
       await makeRequest(
         LocalRestAPI.ApiNoContentResponse,
         `/vault/${encodeURIComponent(args.filename)}`,
